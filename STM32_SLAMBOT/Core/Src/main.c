@@ -23,8 +23,9 @@
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
-#include "gpio.h"
 #include "usart.h"
+#include "gpio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
@@ -43,6 +44,8 @@
 #include <std_msgs/msg/int32.h>
 
 
+#include "cmsis_os2.h"
+#include "constants.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,23 +67,25 @@
 
 /* USER CODE BEGIN PV */
 
-#define NUM_ENCODERS 4
-#define MAX_TICK_COUNT 65353
-#define ACCEL_SCALE 16384.0
-#define GYRO_SCALE  131.0
-
-static const uint8_t LIDAR_ADDR  = 0x10 << 1;
-// static const uint8_t DIST_OUT  = 0x21 << 1;
-//static const uint8_t DIST_LOW  = 0x00 << 1;
-
-
-//test change
-
-static const uint8_t MPU9250_ADDR  = 0x68 << 1;
-static const uint8_t REG_TEMP = 0x00;
-static const uint8_t WHO_AM_I_REG = 0x75;
-static const uint8_t PWR_MGMT_1_REG = 0x6B;
-static const uint8_t ACCEL_XOUT_H = 0x3B;
+//#define NUM_ENCODERS 4
+//#define MAX_TICK_COUNT 65353
+//#define ACCEL_SCALE 16384.0
+//#define GYRO_SCALE  131.0
+//
+//static const uint8_t LIDAR_ADDR  = 0x10 << 1;
+//// static const uint8_t DIST_OUT  = 0x21 << 1;
+////static const uint8_t DIST_LOW  = 0x00 << 1;
+//
+//
+//
+//
+////test change
+//
+//static const uint8_t MPU9250_ADDR  = 0x68 << 1;
+//static const uint8_t REG_TEMP = 0x00;
+//static const uint8_t WHO_AM_I_REG = 0x75;
+//static const uint8_t PWR_MGMT_1_REG = 0x6B;
+//static const uint8_t ACCEL_XOUT_H = 0x3B;
 //static const uint8_t GYRO_XOUT_H = 0x43;
 
 typedef enum{
@@ -166,9 +171,9 @@ Encoder left_back = {0, 0, BACKWARD, BACK, Encoder_LB_Input_GPIO_Port, Encoder_L
 
 Encoder* encoders[NUM_ENCODERS] = {&right_back, &right_front, &left_front, &left_back};
 
-uint8_t imu_buf[14];
-uint8_t uart_buf[100];
-uint8_t i2c_buf[100];
+//uint8_t imu_buf[14];
+//uint8_t uart_buf[100];
+//uint8_t i2c_buf[100];
 
 uint8_t uart_lidar_buf[10];
 uint8_t i2c_lidar_buf[10];
@@ -243,10 +248,9 @@ int main(void)
   strcpy((char*)uart_buf, "Starting Timer2 \r\n");
   HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 
-  void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
+  // void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
 
   HAL_TIM_Base_Start_IT(&htim2);
-
 //  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim3, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
@@ -274,15 +278,16 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	handle_IMU();
-	handle_lidar_i2c();
-	handle_encoder();
+	 handle_IMU();
+	 handle_lidar_i2c();
+	 handle_encoder();
 
 
 //	sprintf((char*)uart_buf, "EncoderTicks: %u\r\n", wheel1_ticks);
 //	HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 //	__HAL_TIM_SET_COUNTER(&htim2, 0);
-
+	  strcpy((char*)uart_buf, "TEST 6\r\n");
+	  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 	HAL_Delay(500);
   }
   /* USER CODE END 3 */
@@ -464,6 +469,11 @@ void handle_lidar_i2c(){
 
 
 void handle_IMU(){
+
+
+	strcpy((char*)uart_buf, "In Handle IMU TEST \r\n");
+	HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+
 	uart_buf[0] = REG_TEMP;
 
 	// verify connection
