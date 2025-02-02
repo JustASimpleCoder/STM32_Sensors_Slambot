@@ -69,8 +69,6 @@ rcl_publisher_t encoder_publisher;
 rcl_publisher_t imu_publisher;
 rcl_publisher_t lidar_publisher;
 
-uint8_t rtos_imu_buf[14];
-
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -97,12 +95,14 @@ void microros_deallocate(void * pointer, void * state);
 void * microros_reallocate(void * pointer, size_t size, void * state);
 void * microros_zero_allocate(size_t number_of_elements, size_t size_of_element, void * state);
 
+void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
 
 float get_encoder_data();
 void get_imu_data(sensor_msgs__msg__Imu *imu_data);
 float get_lidar_data();
 
 /* USER CODE END FunctionPrototypes */
+
 
 void StartDefaultTask(void *argument);
 
@@ -174,9 +174,9 @@ void StartDefaultTask(void *argument)
 	freeRTOS_allocator.zero_allocate =  microros_zero_allocate;
 
 	if (!rcutils_set_default_allocator(&freeRTOS_allocator)) {
-	  strcpy((char*)uart_buf, "Error on default allocators \r\n");
-	  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-	  // printf("Error on default allocators (line %d)\n", __LINE__);
+	  // strcpy((char*)uart_buf, "Error on default allocators \r\n");
+	  // HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+	   printf("Error on default allocators (line %d)\n", __LINE__);
 	}
 
 	// micro-ROS app
@@ -201,8 +201,8 @@ void StartDefaultTask(void *argument)
 
 	// create node
 	rclc_node_init_default(&node, "cubemx_node", "", &support);
-    strcpy((char*)uart_buf, "Finished creating support_init and node_init \r\n");
-    HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+    // strcpy((char*)uart_buf, "Finished creating support_init and node_init \r\n");
+    // HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 
 	// create publisher
 	rclc_publisher_init_default(
@@ -218,7 +218,7 @@ void StartDefaultTask(void *argument)
         "encoder_data"
     );
 
-    rclc_publisher_init_default(
+    rclc_publisher_init_best_effort(
         &imu_publisher,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
@@ -232,16 +232,22 @@ void StartDefaultTask(void *argument)
         "lidar_data"
     );
 
-    strcpy((char*)uart_buf, "Finished init deault of all publishers \r\n");
-    HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+    // strcpy((char*)uart_buf, "Finished init deault of all publishers \r\n");
+    // HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 
     // Start FreeRTOS tasks
 //    osThreadNew(handleEncoder, NULL, &encoderTask_attributes);
 //    osThreadNew(handleIMU, NULL, &imuTask_attributes);
 //    osThreadNew(handleLidar, NULL, &lidarTask_attributes);
 
+    // init_MPU9250();
+
 	msg.data = 0;
+
+	init_imu_msg(&imu_msg);
+
 	rcl_ret_t ret;
+	rcl_ret_t imu_ret;
 	/* Infinite loop */
 	for(;;)
 	{
@@ -252,34 +258,37 @@ void StartDefaultTask(void *argument)
 		ret = rcl_publish(&publisher, &msg, NULL);
 		if (ret != RCL_RET_OK)
 		{
-          strcpy((char*)uart_buf, "main uRos msg failed \r\n");
-          HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//		  printf("Error publishing (line %d)\n", __LINE__);
+          //strcpy((char*)uart_buf, "main uRos msg failed \r\n");
+          //HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+		  printf("Error publishing (line %d)\n", __LINE__);
 		}
-//		ret = rcl_publish(&encoder_publisher, &msg, NULL);
-//		if (ret != RCL_RET_OK)
-//		{
-//	      strcpy((char*)uart_buf, "encoder uRos msg failed \r\n");
-//	      HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//		  printf("Error publishing encoder data (line %d)\n", __LINE__);
-//		}
-		ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
+		ret = rcl_publish(&encoder_publisher, &encoder_msg, NULL);
 		if (ret != RCL_RET_OK)
 		{
-		  strcpy((char*)uart_buf, "imu uRos msg failed \r\n");
-		  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//		  printf("Error publishing imu data (line %d)\n", __LINE__);
+//	      strcpy((char*)uart_buf, "encoder uRos msg failed \r\n");
+//	      HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+		  printf("Error publishing encoder data (line %d)\n", __LINE__);
 		}
-//		ret = rcl_publish(&lidar_publisher, &msg, NULL);
-//		if (ret != RCL_RET_OK)
-//		{
+
+		imu_ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
+		if (imu_ret != RCL_RET_OK)
+		{
+//		  strcpy((char*)uart_buf, "imu uRos msg failed \r\n");
+//		  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+		  msg.data = 0;
+		  printf("Error publishing imu data (line %d)\n", __LINE__);
+		}
+
+		ret = rcl_publish(&lidar_publisher, &lidar_msg, NULL);
+		if (ret != RCL_RET_OK)
+		{
 //		  strcpy((char*)uart_buf, "lidar uRos msg failed \r\n");
 //		  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//		  printf("Error publishing lidar data (line %d)\n", __LINE__);
-//		}
+		  printf("Error publishing lidar data (line %d)\n", __LINE__);
+		}
 
 		msg.data++;
-		osDelay(10);
+		osDelay(100);
 	}
 
   /* USER CODE END StartDefaultTask */
@@ -288,14 +297,69 @@ void StartDefaultTask(void *argument)
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
+
+
 float  get_encoder_data(){
-	float  encoder_data = 0.0;
+	float  encoder_data = encoders[0]->tick_count;
 	return encoder_data;
 }
+void  init_imu_msg(sensor_msgs__msg__Imu *imu_data){
+	imu_data->header.frame_id.data = "MPU9250_fr";
+	imu_data->header.frame_id.size = 10;
 
+    imu_data->linear_acceleration_covariance[0] = 0.00009;  // X variance
+    imu_data->linear_acceleration_covariance[1] = 0;
+    imu_data->linear_acceleration_covariance[2] = 0;
+    imu_data->linear_acceleration_covariance[3] = 0;
+    imu_data->linear_acceleration_covariance[4] = 0.00009;  // Y variance
+    imu_data->linear_acceleration_covariance[5] = 0;
+    imu_data->linear_acceleration_covariance[6] = 0;
+    imu_data->linear_acceleration_covariance[7] = 0;
+    imu_data->linear_acceleration_covariance[8] = 0.00009;  // Z variance
+
+    imu_data->angular_velocity_covariance[0] = 0.0001;
+    imu_data->angular_velocity_covariance[1] = 0;
+    imu_data->angular_velocity_covariance[2] = 0;
+    imu_data->angular_velocity_covariance[3] = 0;
+    imu_data->angular_velocity_covariance[4] = 0.0001;
+    imu_data->angular_velocity_covariance[5] = 0;
+    imu_data->angular_velocity_covariance[6] = 0;
+    imu_data->angular_velocity_covariance[7] = 0;
+    imu_data->angular_velocity_covariance[8] = 0.0001;
+
+    imu_data->orientation_covariance[0] = 9999;  // Set high for unknown values
+    imu_data->orientation_covariance[1] = 0;
+    imu_data->orientation_covariance[2] = 0;
+    imu_data->orientation_covariance[3] = 0;
+    imu_data->orientation_covariance[4] = 9999;
+    imu_data->orientation_covariance[5] = 0;
+    imu_data->orientation_covariance[6] = 0;
+    imu_data->orientation_covariance[7] = 0;
+    imu_data->orientation_covariance[8] = 9999;
+
+
+}
 void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
 
-    HAL_I2C_Mem_Read(&hi2c1, MPU9250_ADDR, ACCEL_XOUT_H, 1, imu_buf, 14, HAL_MAX_DELAY);
+	HAL_StatusTypeDef imu_ret_func;
+	imu_ret_func = HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDR, i2c_buf, 1, HAL_MAX_DELAY);
+	if(imu_ret_func != HAL_OK){
+		printf("Error Master Transmit I2C for imu \n");
+		return;
+	}
+
+	imu_ret_func = HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDR, i2c_buf, 2, HAL_MAX_DELAY);
+	if(imu_ret_func != HAL_OK){
+		printf("Error Master Receive I2C for imu \n");
+		return;
+	}
+
+
+	imu_ret_func = HAL_I2C_Mem_Read(&hi2c1, MPU9250_ADDR, ACCEL_XOUT_H, 1, imu_buf, 14, HAL_MAX_DELAY);
+    if(imu_ret_func != HAL_OK){
+    	printf("Error reading I2C imu data \n");
+    	return;
+    }
 
     imu_data->linear_acceleration.x = (int16_t)((imu_buf[0] << 8) | imu_buf[1]) / ACCEL_SCALE;
     imu_data->linear_acceleration.y = (int16_t)((imu_buf[2] << 8) | imu_buf[3]) / ACCEL_SCALE;
@@ -311,6 +375,8 @@ void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
     imu_data->orientation.y = 0.0;
     imu_data->orientation.z = 0.0;
     imu_data->orientation.w = 1.0; // Default quaternion representing "no rotation"
+
+
 
     imu_data->header.stamp.sec = HAL_GetTick() / 1000;
     imu_data->header.stamp.nanosec = (HAL_GetTick() % 1000) * 1000000;

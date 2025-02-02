@@ -9,6 +9,7 @@
 #define INC_CONSTANTS_H_
 
 #include <stdint.h>
+#include "gpio.h"
 
 #define NUM_ENCODERS 4
 #define MAX_TICK_COUNT 65353
@@ -49,11 +50,11 @@ static const uint8_t ACCEL_XOUT_H = 0x3B;
 //}RobotMovement;
 //
 //
-//typedef enum{
-//    FORWARD = 1,
-//    BACKWARD = -1,
-//	STOPPED = 100
-//}Direction;
+typedef enum{
+    FORWARD = 1,
+    BACKWARD = -1,
+	STOPPED = 100
+}Direction;
 //
 ////typedef struct {
 ////    Direction left_front;
@@ -87,32 +88,32 @@ static const uint8_t ACCEL_XOUT_H = 0x3B;
 //Direction DIR_DIAG_FORWARD_LEFT[] = {STOPPED, FORWARD, STOPPED, FORWARD};
 //Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
 //
-//typedef enum{
-//    BACK = 0,
-//    FRONT = 1,
-//}WheelPosition;
+typedef enum{
+    BACK = 0,
+    FRONT = 1,
+}WheelPosition;
 //
 ////volatile int32_t encoder_ticks_wheel1 = 0;
 ////volatile uint8_t prev_encoder1_state = 0;
 //
-//typedef struct{
-//	volatile int32_t tick_count;
-//	volatile uint8_t prev_state;
-//	Direction wheel_spin;
-//	WheelPosition wheel_pos;
-//	GPIO_TypeDef* gpio_port;
-//	uint16_t gpio_pin;
-//}Encoder;
+typedef struct{
+	volatile int32_t tick_count;
+	volatile uint8_t prev_state;
+	Direction wheel_spin;
+	WheelPosition wheel_pos;
+	GPIO_TypeDef* gpio_port;
+	uint16_t gpio_pin;
+}Encoder;
 //
 //
 ////forward wheel and back spin in opposite direction to achieve forward/backward
 //// TODO: when moving direction right/left or diagonal, how to calcualte odometry?
-//Encoder right_back = {0, 0, BACKWARD, BACK, Encoder_RB_Input_GPIO_Port, Encoder_RB_Input_Pin};
-//Encoder right_front = {0, 0, FORWARD, FRONT, Encoder_RF_Input_GPIO_Port, Encoder_RF_Input_Pin};
-//Encoder left_front = {0, 0, FORWARD, FRONT, Encoder_LF_Input_GPIO_Port,Encoder_LF_Input_Pin};
-//Encoder left_back = {0, 0, BACKWARD, BACK, Encoder_LB_Input_GPIO_Port, Encoder_LB_Input_Pin};
-//
-//Encoder* encoders[NUM_ENCODERS] = {&right_back, &right_front, &left_front, &left_back};
+extern Encoder right_back; //  = {0, 0, BACKWARD, BACK, Encoder_RB_Input_GPIO_Port, Encoder_RB_Input_Pin};
+extern Encoder right_front; // = {0, 0, FORWARD, FRONT, Encoder_RF_Input_GPIO_Port, Encoder_RF_Input_Pin};
+extern Encoder left_front; // = {0, 0, FORWARD, FRONT, Encoder_LF_Input_GPIO_Port,Encoder_LF_Input_Pin};
+extern Encoder left_back; // = {0, 0, BACKWARD, BACK, Encoder_LB_Input_GPIO_Port, Encoder_LB_Input_Pin};
+
+extern Encoder* encoders[NUM_ENCODERS];//  = {&right_back, &right_front, &left_front, &left_back};
 //
 extern uint8_t imu_buf[14];
 extern uint8_t uart_buf[100];

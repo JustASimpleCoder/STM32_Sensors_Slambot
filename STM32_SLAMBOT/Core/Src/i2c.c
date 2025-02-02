@@ -19,9 +19,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
-
+//#include <string.h>
 /* USER CODE BEGIN 0 */
 
+#include "constants.h"
+void init_MPU9250(void);
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -81,7 +83,7 @@ void MX_I2C2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C2_Init 2 */
-
+  init_MPU9250();
   /* USER CODE END I2C2_Init 2 */
 
 }
@@ -194,5 +196,21 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 }
 
 /* USER CODE BEGIN 1 */
+void init_MPU9250(void)
+{
+    uint8_t check, data;
 
+    // Check WHO_AM_I register
+    HAL_I2C_Mem_Read(&hi2c1, MPU9250_ADDR, WHO_AM_I_REG, 1, &check, 1, HAL_MAX_DELAY);
+    if (check != 0x71)  // 0x71 is the expected response for MPU-9250
+    {
+        //char error_msg[] = "MPU9250 not found\r\n";
+        //HAL_UART_Transmit(&huart2, (uint8_t *)error_msg, strlen(error_msg), HAL_MAX_DELAY);
+        //while (1);  // Stop execution if MPU-9250 is not detected
+    }
+
+    // Wake up the MPU-9250 by clearing sleep mode bit (6) in PWR_MGMT_1
+    data = 0x00;
+    HAL_I2C_Mem_Write(&hi2c1, MPU9250_ADDR, PWR_MGMT_1_REG, 1, &data, 1, HAL_MAX_DELAY);
+}
 /* USER CODE END 1 */
