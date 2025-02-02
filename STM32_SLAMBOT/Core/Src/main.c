@@ -176,7 +176,7 @@ Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
 //uint8_t i2c_buf[100];
 
 uint8_t uart_lidar_buf[10];
-uint8_t i2c_lidar_buf[10];
+//uint8_t i2c_lidar_buf[10];
 
 HAL_StatusTypeDef ret;
 HAL_StatusTypeDef ret_lidar;
@@ -372,8 +372,7 @@ void MPU9250_Init(void)
 
 
 void handle_lidar(){
-    sprintf((char*)uart_buf, "Handle LIDAR START\r\n");
-    HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+
     bool receive_lidar_data = true;
     // Receive data from Lidar (9 bytes for a typical distance data frame)
 //    uint8_t continous_output[] = {0x5A, 0x05, 0x07, 0x01, 0x00};

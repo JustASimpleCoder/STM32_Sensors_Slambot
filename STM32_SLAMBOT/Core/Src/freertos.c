@@ -35,6 +35,7 @@
 #include <uxr/client/transport.h>
 #include <rmw_microxrcedds_c/config.h>
 #include <rmw_microros/rmw_microros.h>
+#include <uxr/client/util/time.h>
 
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
@@ -65,9 +66,15 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+rcl_publisher_t publisher;
 rcl_publisher_t encoder_publisher;
 rcl_publisher_t imu_publisher;
 rcl_publisher_t lidar_publisher;
+
+std_msgs__msg__Float32 encoder_msg;
+sensor_msgs__msg__Imu  imu_msg;
+std_msgs__msg__Float32 lidar_msg;
+std_msgs__msg__Int32 msg;
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -99,7 +106,7 @@ void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
 
 float get_encoder_data();
 void get_imu_data(sensor_msgs__msg__Imu *imu_data);
-float get_lidar_data();
+bool get_lidar_data();
 
 /* USER CODE END FunctionPrototypes */
 
@@ -180,16 +187,16 @@ void StartDefaultTask(void *argument)
 	}
 
 	// micro-ROS app
-	rcl_publisher_t publisher;
-	rcl_publisher_t encoder_publisher;
-	rcl_publisher_t imu_publisher;
-	rcl_publisher_t lidar_publisher;
+//	rcl_publisher_t publisher;
+//	rcl_publisher_t encoder_publisher;
+//	rcl_publisher_t imu_publisher;
+//	rcl_publisher_t lidar_publisher;
 
-	std_msgs__msg__Float32 encoder_msg;
-	sensor_msgs__msg__Imu  imu_msg;
-	std_msgs__msg__Float32 lidar_msg;
+//	std_msgs__msg__Float32 encoder_msg;
+//	sensor_msgs__msg__Imu  imu_msg;
+//	std_msgs__msg__Float32 lidar_msg;
+//	std_msgs__msg__Int32 msg;
 
-	std_msgs__msg__Int32 msg;
 	rclc_support_t support;
 	rcl_allocator_t allocator;
 	rcl_node_t node;
@@ -245,15 +252,13 @@ void StartDefaultTask(void *argument)
 	msg.data = 0;
 
 	init_imu_msg(&imu_msg);
+	float lidar_dist;
 
 	rcl_ret_t ret;
 	rcl_ret_t imu_ret;
 	/* Infinite loop */
 	for(;;)
 	{
-        encoder_msg.data = get_encoder_data();
-        get_imu_data(&imu_msg);
-        lidar_msg.data = get_lidar_data();
 
 		ret = rcl_publish(&publisher, &msg, NULL);
 		if (ret != RCL_RET_OK)
@@ -262,14 +267,19 @@ void StartDefaultTask(void *argument)
           //HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 		  printf("Error publishing (line %d)\n", __LINE__);
 		}
-		ret = rcl_publish(&encoder_publisher, &encoder_msg, NULL);
-		if (ret != RCL_RET_OK)
-		{
-//	      strcpy((char*)uart_buf, "encoder uRos msg failed \r\n");
-//	      HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-		  printf("Error publishing encoder data (line %d)\n", __LINE__);
+
+		for(int i = 0; i < NUM_ENCODERS; i++){
+			encoder_msg.data = get_encoder_data(i);
+			ret = rcl_publish(&encoder_publisher, &encoder_msg, NULL);
+			if (ret != RCL_RET_OK)
+			{
+	//	      strcpy((char*)uart_buf, "encoder uRos msg failed \r\n");
+	//	      HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+			  printf("Error publishing encoder data (line %d)\n", __LINE__);
+			}
 		}
 
+        get_imu_data(&imu_msg);
 		imu_ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
 		if (imu_ret != RCL_RET_OK)
 		{
@@ -279,13 +289,18 @@ void StartDefaultTask(void *argument)
 		  printf("Error publishing imu data (line %d)\n", __LINE__);
 		}
 
-		ret = rcl_publish(&lidar_publisher, &lidar_msg, NULL);
-		if (ret != RCL_RET_OK)
-		{
-//		  strcpy((char*)uart_buf, "lidar uRos msg failed \r\n");
-//		  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-		  printf("Error publishing lidar data (line %d)\n", __LINE__);
+
+		if(get_lidar_data(&lidar_dist)){
+			 lidar_msg.data = lidar_dist;
+			 ret = rcl_publish(&lidar_publisher, &lidar_msg, NULL);
+			 if (ret != RCL_RET_OK)
+			 {
+//				 strcpy((char*)uart_buf, "lidar uRos msg failed \r\n");
+//				 HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+				 printf("Error publishing lidar data (line %d)\n", __LINE__);
+			 }
 		}
+
 
 		msg.data++;
 		osDelay(100);
@@ -297,11 +312,8 @@ void StartDefaultTask(void *argument)
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
-
-
-float  get_encoder_data(){
-	float  encoder_data = encoders[0]->tick_count;
-	return encoder_data;
+float  get_encoder_data(int enc_num){
+	return (float)encoders[enc_num]->tick_count;
 }
 void  init_imu_msg(sensor_msgs__msg__Imu *imu_data){
 	imu_data->header.frame_id.data = "MPU9250_fr";
@@ -342,17 +354,21 @@ void  init_imu_msg(sensor_msgs__msg__Imu *imu_data){
 void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
 
 	HAL_StatusTypeDef imu_ret_func;
-	imu_ret_func = HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDR, i2c_buf, 1, HAL_MAX_DELAY);
-	if(imu_ret_func != HAL_OK){
-		printf("Error Master Transmit I2C for imu \n");
-		return;
-	}
 
-	imu_ret_func = HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDR, i2c_buf, 2, HAL_MAX_DELAY);
-	if(imu_ret_func != HAL_OK){
-		printf("Error Master Receive I2C for imu \n");
-		return;
-	}
+
+
+
+//	imu_ret_func = HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDR, i2c_buf, 1, HAL_MAX_DELAY);
+//	if(imu_ret_func != HAL_OK){
+//		printf("Error Master Transmit I2C for imu \n");
+//		return;
+//	}
+//
+//	imu_ret_func = HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDR, i2c_buf, 2, HAL_MAX_DELAY);
+//	if(imu_ret_func != HAL_OK){
+//		printf("Error Master Receive I2C for imu \n");
+//		return;
+//	}
 
 
 	imu_ret_func = HAL_I2C_Mem_Read(&hi2c1, MPU9250_ADDR, ACCEL_XOUT_H, 1, imu_buf, 14, HAL_MAX_DELAY);
@@ -377,14 +393,43 @@ void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
     imu_data->orientation.w = 1.0; // Default quaternion representing "no rotation"
 
 
+    uint32_t time_now = uxr_millis();
+    imu_data->header.stamp.sec = time_now / 1000;
+    imu_data->header.stamp.nanosec = (time_now % 1000) * 1000000;
 
-    imu_data->header.stamp.sec = HAL_GetTick() / 1000;
-    imu_data->header.stamp.nanosec = (HAL_GetTick() % 1000) * 1000000;
+
 }
 
-float  get_lidar_data(){
-	float  lidar_data = 0.0;
-	return lidar_data;
+bool get_lidar_data(float * dist_out){
+
+	uart_buf[0] = REG_TEMP;
+	HAL_StatusTypeDef lidar_ret_func;
+
+	lidar_ret_func = HAL_I2C_Master_Transmit(&hi2c2, LIDAR_ADDR, uart_buf, 1, HAL_MAX_DELAY);
+	if(lidar_ret_func != HAL_OK){
+//		strcpy((char*)uart_buf, "Lidar I2C Transmit Failed in handle_IMU\r\n");
+//		HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+		return false;
+	}
+
+	lidar_ret_func = HAL_I2C_Master_Receive(&hi2c2, LIDAR_ADDR, i2c_lidar_buf, 2, HAL_MAX_DELAY);
+	if(lidar_ret_func != HAL_OK){
+//		strcpy((char*)uart_buf, "Lidar I2C Receive Failed in handle_IMU\r\n");
+//		HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+		return false;
+	}
+
+
+	lidar_ret_func =  HAL_I2C_Mem_Read(&hi2c2, LIDAR_ADDR, 0x00, 1, i2c_lidar_buf, 14, HAL_MAX_DELAY);
+	uint8_t distance = (i2c_lidar_buf[1] << 8) | i2c_lidar_buf[0];
+//	sprintf((char *)uart_buf, "LiDAR Distance: %u cm\r\n", distance);
+//	HAL_UART_Transmit(&huart2, uart_buf, strlen((char *)uart_buf), HAL_MAX_DELAY);
+
+
+
+	*dist_out = (float)distance;
+
+	return true;
 }
 /* USER CODE END Application */
 

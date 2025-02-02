@@ -120,7 +120,7 @@ extern uint8_t uart_buf[100];
 extern uint8_t i2c_buf[100];
 //
 //uint8_t uart_lidar_buf[10];
-//uint8_t i2c_lidar_buf[10];
+extern uint8_t i2c_lidar_buf[10];
 //
 //HAL_StatusTypeDef ret;
 //HAL_StatusTypeDef ret_lidar;
