@@ -15,6 +15,10 @@
 #define MAX_TICK_COUNT 65353
 #define ACCEL_SCALE 16384.0
 #define GYRO_SCALE  131.0
+#define MAG_SCALE  0.15;
+
+
+
 
 static const uint8_t LIDAR_ADDR  = 0x10 << 1;
 // static const uint8_t DIST_OUT  = 0x21 << 1;
@@ -31,6 +35,18 @@ static const uint8_t WHO_AM_I_REG = 0x75;
 static const uint8_t PWR_MGMT_1_REG = 0x6B;
 static const uint8_t ACCEL_XOUT_H = 0x3B;
 
+static const uint8_t AK8963_ADDR = 0x0C << 1;
+static const uint8_t AK8963_XOUT_L = 0x03;
+static const uint8_t INT_PIN_CFG = 0x37;
+static const uint8_t AK8963_CNTL1 = 0x0A;
+static const uint8_t AK8963_CNTL2 = 0x0B;
+
+
+static const uint8_t IMU_SAMPLE_RATE = 100;
+
+extern volatile float asax;
+extern volatile float asay;
+extern volatile float asaz;
 
 //typedef enum{
 //    STOP = 'x',
@@ -118,6 +134,8 @@ extern Encoder* encoders[NUM_ENCODERS];//  = {&right_back, &right_front, &left_f
 extern uint8_t imu_buf[14];
 extern uint8_t uart_buf[100];
 extern uint8_t i2c_buf[100];
+
+extern uint8_t mag_buf[7];
 //
 //uint8_t uart_lidar_buf[10];
 extern uint8_t i2c_lidar_buf[10];

@@ -45,6 +45,7 @@
 #include "usart.h"
 #include "i2c.h"
 #include "constants.h"
+#include "MadgwickAHRS.h"
 
 /* USER CODE END Includes */
 
@@ -71,7 +72,7 @@ rcl_publisher_t encoder_publisher;
 rcl_publisher_t imu_publisher;
 rcl_publisher_t lidar_publisher;
 
-std_msgs__msg__Float32 encoder_msg;
+std_msgs__msg__Int32 encoder_msg;
 sensor_msgs__msg__Imu  imu_msg;
 std_msgs__msg__Float32 lidar_msg;
 std_msgs__msg__Int32 msg;
@@ -104,9 +105,14 @@ void * microros_zero_allocate(size_t number_of_elements, size_t size_of_element,
 
 void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
 
-float get_encoder_data();
+int32_t get_encoder_data();
 void get_imu_data(sensor_msgs__msg__Imu *imu_data);
 bool get_lidar_data();
+
+void madgwick_init();
+void madgwick_update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+void madgwick_get_quaternion(float *qx, float *qy, float *qz, float *qw);
+void read_magnetometer(float *mag_x, float *mag_y, float *mag_z);
 
 /* USER CODE END FunctionPrototypes */
 
@@ -221,7 +227,7 @@ void StartDefaultTask(void *argument)
     rclc_publisher_init_default(
         &encoder_publisher,
         &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
         "encoder_data"
     );
 
@@ -312,8 +318,8 @@ void StartDefaultTask(void *argument)
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
-float  get_encoder_data(int enc_num){
-	return (float)encoders[enc_num]->tick_count;
+int32_t  get_encoder_data(int enc_num){
+	return encoders[enc_num]->tick_count;
 }
 void  init_imu_msg(sensor_msgs__msg__Imu *imu_data){
 	imu_data->header.frame_id.data = "MPU9250_fr";
@@ -354,26 +360,12 @@ void  init_imu_msg(sensor_msgs__msg__Imu *imu_data){
 void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
 
 	HAL_StatusTypeDef imu_ret_func;
-
-
-
-
-//	imu_ret_func = HAL_I2C_Master_Transmit(&hi2c1, MPU9250_ADDR, i2c_buf, 1, HAL_MAX_DELAY);
-//	if(imu_ret_func != HAL_OK){
-//		printf("Error Master Transmit I2C for imu \n");
-//		return;
-//	}
-//
-//	imu_ret_func = HAL_I2C_Master_Receive(&hi2c1, MPU9250_ADDR, i2c_buf, 2, HAL_MAX_DELAY);
-//	if(imu_ret_func != HAL_OK){
-//		printf("Error Master Receive I2C for imu \n");
-//		return;
-//	}
+	float mag_x, mag_y, mag_z;
 
 
 	imu_ret_func = HAL_I2C_Mem_Read(&hi2c1, MPU9250_ADDR, ACCEL_XOUT_H, 1, imu_buf, 14, HAL_MAX_DELAY);
     if(imu_ret_func != HAL_OK){
-    	printf("Error reading I2C imu data \n");
+    	// printf("Error reading I2C imu data \n");
     	return;
     }
 
@@ -386,11 +378,22 @@ void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
     imu_data->angular_velocity.y = (int16_t)((imu_buf[10] << 8) | imu_buf[11]) / GYRO_SCALE;
     imu_data->angular_velocity.z = (int16_t)((imu_buf[12] << 8) | imu_buf[13]) / GYRO_SCALE;
 
-    // Set orientation to zero (or replace with real sensor data if available)
-    imu_data->orientation.x = 0.0;
-    imu_data->orientation.y = 0.0;
-    imu_data->orientation.z = 0.0;
-    imu_data->orientation.w = 1.0; // Default quaternion representing "no rotation"
+
+    read_magnetometer(&mag_x, &mag_y, &mag_z);
+
+    madgwick_update(
+        imu_data->angular_velocity.x, imu_data->angular_velocity.y, imu_data->angular_velocity.z,
+        imu_data->linear_acceleration.x, imu_data->linear_acceleration.y, imu_data->linear_acceleration.z,
+        mag_x, mag_y, mag_z
+    );
+
+    float qx, qy, qz, qw;
+    madgwick_get_quaternion(&qx, &qy, &qz, &qw);
+
+    imu_data->orientation.x = qx;
+    imu_data->orientation.y = qy;
+    imu_data->orientation.z = qz;
+    imu_data->orientation.w = qw;
 
 
     uint32_t time_now = uxr_millis();
@@ -398,7 +401,41 @@ void  get_imu_data(sensor_msgs__msg__Imu *imu_data){
     imu_data->header.stamp.nanosec = (time_now % 1000) * 1000000;
 
 
+
 }
+
+void madgwick_init() {
+    madgwick_begin(IMU_SAMPLE_RATE);  // IMU_SAMPLE_RATE is the sampling rate in Hz
+}
+
+void madgwick_update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+	MadgwickAHRSupdate(gx, gy, gz, ax, ay, az, mx, my, mz);
+}
+
+void madgwick_get_quaternion(float *qx, float *qy, float *qz, float *qw) {
+    *qx = q0;
+    *qy = q1;
+    *qz = q2;
+    *qw = q3;
+}
+
+void read_magnetometer(float *mag_x, float *mag_y, float *mag_z) {
+    uint8_t mag_buf[7];
+    HAL_StatusTypeDef ret;
+
+    // Read magnetometer data
+    ret = HAL_I2C_Mem_Read(&hi2c1, AK8963_ADDR, AK8963_XOUT_L, 1, mag_buf, 7, HAL_MAX_DELAY);
+    if (ret != HAL_OK) {
+        printf("Error reading magnetometer data\n");
+        return;
+    }
+
+    // Convert raw data to microteslas (uT)
+    *mag_x = (int16_t)((mag_buf[1] << 8) | mag_buf[0]) * MAG_SCALE;
+    *mag_y = (int16_t)((mag_buf[3] << 8) | mag_buf[2]) * MAG_SCALE;
+    *mag_z = (int16_t)((mag_buf[5] << 8) | mag_buf[4]) * MAG_SCALE;
+}
+
 
 bool get_lidar_data(float * dist_out){
 

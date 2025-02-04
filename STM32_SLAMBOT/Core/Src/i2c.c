@@ -19,11 +19,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
+#include "constants.h"
 //#include <string.h>
 /* USER CODE BEGIN 0 */
 
 #include "constants.h"
 void init_MPU9250(void);
+void init_magnetometer(void);
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -84,6 +86,7 @@ void MX_I2C2_Init(void)
   }
   /* USER CODE BEGIN I2C2_Init 2 */
   init_MPU9250();
+  init_magnetometer();
   /* USER CODE END I2C2_Init 2 */
 
 }
@@ -213,4 +216,40 @@ void init_MPU9250(void)
     data = 0x00;
     HAL_I2C_Mem_Write(&hi2c1, MPU9250_ADDR, PWR_MGMT_1_REG, 1, &data, 1, HAL_MAX_DELAY);
 }
+void init_magnetometer(void)
+{
+    uint8_t data;
+    HAL_StatusTypeDef ret;
+
+    // Enable I2C bypass mode on the MPU9250 to access the magnetometer
+    data = 0x02;
+    ret = HAL_I2C_Mem_Write(&hi2c1, MPU9250_ADDR, INT_PIN_CFG, 1, &data, 1, HAL_MAX_DELAY);
+    if(ret != HAL_OK) {
+        //char error_msg[] = "MPU9250 magnometer register not found\r\n";
+        //HAL_UART_Transmit(&huart2, (uint8_t *)error_msg, strlen(error_msg), HAL_MAX_DELAY);
+        //while (1);  // Stop execution if MPU-9250 is not detectedr
+    }
+
+    data = 0x01;
+    HAL_I2C_Mem_Write(&hi2c1, AK8963_ADDR, AK8963_CNTL2, 1, &data, 1, HAL_MAX_DELAY);
+    HAL_Delay(100);
+
+    data = 0x16;
+    ret = HAL_I2C_Mem_Write(&hi2c1, AK8963_ADDR, AK8963_CNTL1, 1, &data, 1, HAL_MAX_DELAY);
+    if(ret != HAL_OK) {
+        //char error_msg[] = "MPU9250 magnometer failed to be set in continuous measurement mode \r\n";
+        //HAL_UART_Transmit(&huart2, (uint8_t *)error_msg, strlen(error_msg), HAL_MAX_DELAY);
+        //while (1);  // Stop execution if MPU-9250 is not detectedr
+    }
+
+    uint8_t asa[3];
+    ret = HAL_I2C_Mem_Read(&hi2c1, AK8963_ADDR, 0x10, 1, asa, 3, HAL_MAX_DELAY);
+    if (ret == HAL_OK) {
+        asax = ((asa[0] - 128) / 256.0f) + 1.0f;
+        asay = ((asa[1] - 128) / 256.0f) + 1.0f;
+        asaz = ((asa[2] - 128) / 256.0f) + 1.0f;
+    }
+}
+
+
 /* USER CODE END 1 */
