@@ -88,22 +88,22 @@
 //static const uint8_t ACCEL_XOUT_H = 0x3B;
 //static const uint8_t GYRO_XOUT_H = 0x43;
 
-typedef enum{
-    STOP = 'x',
-    MOVE_FORWARD = 'w',
-    MOVE_BACKWARD = 's',
-    MOVE_LEFT = 'l',
-    MOVE_RIGHT = 'r',
-    ROTATE_LEFT = 'a',
-    ROTATE_RIGHT = 'd',
-    DIAG_FORWARD_RIGHT = 'e',
-    DIAG_BACKWARD_RIGHT = 'c',
-    DIAG_FORWARD_LEFT = 'q',
-    DIAG_BACKWARD_LEFT = 'z',
-    FASTER = '+',
-    SLOWER = '-',
-    INVALID = '?'
-}RobotMovement;
+//typedef enum{
+//    STOP = 'x',
+//    MOVE_FORWARD = 'w',
+//    MOVE_BACKWARD = 's',
+//    MOVE_LEFT = 'l',
+//    MOVE_RIGHT = 'r',
+//    ROTATE_LEFT = 'a',
+//    ROTATE_RIGHT = 'd',
+//    DIAG_FORWARD_RIGHT = 'e',
+//    DIAG_BACKWARD_RIGHT = 'c',
+//    DIAG_FORWARD_LEFT = 'q',
+//    DIAG_BACKWARD_LEFT = 'z',
+//    FASTER = '+',
+//    SLOWER = '-',
+//    INVALID = '?'
+//}RobotMovement;
 
 
 //typedef enum{
@@ -133,16 +133,16 @@ typedef enum{
 
 
 //Direction* test = (Direction*)mallac(sizeof(Direction)*4);
-Direction DIR_MOVE_FORWARD[] = {BACKWARD, FORWARD, FORWARD, BACKWARD};
-Direction DIR_MOVE_BACKWARD[] = {FORWARD, BACKWARD, BACKWARD, FORWARD};
-Direction DIR_MOVE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-Direction DIR_MOVE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-Direction DIR_ROTATE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-Direction DIR_ROTATE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-Direction DIR_DIAG_FORWARD_RIGHT[] = {FORWARD, STOPPED, FORWARD, STOPPED};
-Direction DIR_DIAG_BACKWARD_RIGHT[] = {STOPPED, BACKWARD, STOPPED, BACKWARD};
-Direction DIR_DIAG_FORWARD_LEFT[] = {STOPPED, FORWARD, STOPPED, FORWARD};
-Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
+//Direction DIR_MOVE_FORWARD[] = {BACKWARD, FORWARD, FORWARD, BACKWARD};
+//Direction DIR_MOVE_BACKWARD[] = {FORWARD, BACKWARD, BACKWARD, FORWARD};
+//Direction DIR_MOVE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+//Direction DIR_MOVE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+//Direction DIR_ROTATE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+//Direction DIR_ROTATE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+//Direction DIR_DIAG_FORWARD_RIGHT[] = {FORWARD, STOPPED, FORWARD, STOPPED};
+//Direction DIR_DIAG_BACKWARD_RIGHT[] = {STOPPED, BACKWARD, STOPPED, BACKWARD};
+//Direction DIR_DIAG_FORWARD_LEFT[] = {STOPPED, FORWARD, STOPPED, FORWARD};
+//Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
 
 //typedef enum{
 //    BACK = 0,
@@ -197,7 +197,7 @@ void handle_lidar_i2c();
 void handle_encoder();
 
 
-void update_multiple_directions(Direction dir[]);
+void update_multiple_directions(const Direction dir[]);
 void update_encoder_directon(Encoder * enc, Direction wheel_dir);
 void handle_encoder_direction(RobotMovement move);
 
@@ -622,8 +622,8 @@ void handle_encoder_direction(RobotMovement move){
 	}
 }
 
-void update_multiple_directions(Direction  dir[]) {
-	if( dir == NULL){
+void update_multiple_directions(const Direction  dir[]) {
+	if(dir == NULL){
 		//error
 		return;
 	}
@@ -681,6 +681,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             }
         }
     }
+
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();

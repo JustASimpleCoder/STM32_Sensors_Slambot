@@ -38,6 +38,7 @@
 #include <rmw_microros/rmw_microros.h>
 #include <uxr/client/util/time.h>
 
+#include <std_msgs/msg/string.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 
@@ -77,11 +78,17 @@ rcl_publisher_t publisher;
 rcl_publisher_t encoder_publisher;
 rcl_publisher_t imu_publisher;
 rcl_publisher_t lidar_publisher;
+rcl_publisher_t encoder_pub_check;
+
+rcl_subscription_t encoder_dir_subscriber;
+
 
 std_msgs__msg__Int32 encoder_msg;
 sensor_msgs__msg__Imu  imu_msg;
 std_msgs__msg__Float32 lidar_msg;
 std_msgs__msg__Int32 msg;
+std_msgs__msg__String sub_encoder_dir_msg;
+std_msgs__msg__String pub_encoder_dir_msg;
 
 sensor_msgs__msg__LaserScan lidar_msg_test;
 
@@ -114,10 +121,16 @@ void microros_deallocate(void * pointer, void * state);
 void * microros_reallocate(void * pointer, size_t size, void * state);
 void * microros_zero_allocate(size_t number_of_elements, size_t size_of_element, void * state);
 
-void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
+
 
 int32_t get_encoder_data();
+void update_encs_dir(RobotMovement move);
+void update_multi_dir(const Direction  dir[]);
+void update_enc_dir(Encoder * enc, Direction wheel_dir);
+void sub_encoder_dir_callback(const void * msgin);
 
+
+void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
 void get_imu_data(sensor_msgs__msg__Imu *imu_data);
 
 void lidar_sweep(sensor_msgs__msg__LaserScan *lidar_msg_test);
@@ -268,6 +281,47 @@ void StartDefaultTask(void *argument)
         "lidar_data"
     );
 
+    rclc_publisher_init_default(
+        &encoder_pub_check,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+        "encoder_check"
+    );
+
+    rmw_qos_profile_t qos_profile = {
+        .history = RMW_QOS_POLICY_HISTORY_KEEP_LAST, // Keep last message
+        .depth = 1, // Depth of 1
+        .reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT, // BestEffort reliability
+        .durability = RMW_QOS_POLICY_DURABILITY_VOLATILE // Volatile durability
+    };
+
+    rclc_subscription_init(
+        &encoder_dir_subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+        "motor_control",
+		&qos_profile
+	);
+
+    rclc_executor_t executor = rclc_executor_get_zero_initialized_executor();
+    rclc_executor_init(&executor, &support.context, 2, &allocator);
+    rclc_executor_add_subscription(
+    		&executor,
+			&encoder_dir_subscriber,
+			&sub_encoder_dir_msg,
+			&sub_encoder_dir_callback,
+			ON_NEW_DATA
+	);
+
+    sub_encoder_dir_msg.data.data = (char * ) malloc(200 * sizeof(char));
+    sub_encoder_dir_msg.data.size = 0;
+    sub_encoder_dir_msg.data.capacity = 200;
+
+    pub_encoder_dir_msg.data.data = (char * ) malloc(200 * sizeof(char));
+    pub_encoder_dir_msg.data.size = 0;
+    pub_encoder_dir_msg.data.capacity = 200;
+
+
 
     // strcpy((char*)uart_buf, "Finished init deault of all publishers \r\n");
     // HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
@@ -297,6 +351,8 @@ void StartDefaultTask(void *argument)
           //HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 		  printf("Error publishing (line %d)\n", __LINE__);
 		}
+
+		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 
 		for(int i = 0; i < NUM_ENCODERS; i++){
 			encoder_msg.data = get_encoder_data(i);
@@ -354,6 +410,8 @@ void StartDefaultTask(void *argument)
 			msg.data = 0;
 		}
 
+
+
 		osDelay(100);
 	}
 
@@ -362,6 +420,86 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void sub_encoder_dir_callback(const void * msgin)
+{
+	const std_msgs__msg__String *msg_enc = (const std_msgs__msg__String *)msgin;
+    RobotMovement current_move = (RobotMovement)msg_enc->data.data[0]; // Assuming the message contains a single character
+    update_encs_dir(current_move);
+
+    pub_encoder_dir_msg = *msg_enc;
+    pub_encoder_dir_msg.data.size = strlen(pub_encoder_dir_msg.data.data);
+    rcl_publish(&encoder_pub_check, &pub_encoder_dir_msg, NULL);
+
+}
+
+void update_encs_dir(RobotMovement move){
+
+	switch (move){
+		case STOP:
+			//Fall Through, potentially add check to ensure motors are stopped
+			break;
+		case MOVE_FORWARD:
+			update_multi_dir(DIR_MOVE_FORWARD);
+			break;
+		case MOVE_BACKWARD:
+			update_multi_dir(DIR_MOVE_BACKWARD);
+			break;
+		case MOVE_LEFT:
+			update_multi_dir(DIR_MOVE_LEFT);
+			break;
+		case MOVE_RIGHT:
+			update_multi_dir(DIR_MOVE_RIGHT);
+			break;
+		case ROTATE_LEFT:
+			update_multi_dir(DIR_ROTATE_LEFT);
+			break;
+		case ROTATE_RIGHT:
+			update_multi_dir(DIR_ROTATE_RIGHT);
+			break;
+		case DIAG_FORWARD_RIGHT:
+			update_multi_dir(DIR_DIAG_FORWARD_RIGHT);
+			break;
+		case DIAG_BACKWARD_RIGHT:
+			update_multi_dir(DIR_DIAG_BACKWARD_RIGHT);
+			break;
+		case DIAG_FORWARD_LEFT:
+			update_multi_dir(DIR_DIAG_FORWARD_LEFT);
+			break;
+		case DIAG_BACKWARD_LEFT:
+			update_multi_dir(DIR_DIAG_BACKWARD_LEFT);
+			break;
+		case FASTER:
+			//fall through
+			break;
+		case SLOWER:
+			//fall through
+			break;
+		default:
+			//fall through
+			break;
+	}
+}
+
+void update_multi_dir(const Direction  dir[]) {
+	if(dir == NULL){
+		//error
+		return;
+	}
+
+    for (uint8_t i = 0; i < NUM_ENCODERS; i++) {
+    	if(dir[i] == STOPPED){
+    		continue;
+    	}
+    	update_enc_dir(encoders[i], dir[i]);
+    }
+}
+
+void update_enc_dir(Encoder * enc, Direction wheel_dir){
+	if(enc == NULL){
+		return;
+	}
+	enc->wheel_spin = wheel_dir;
+}
 
 int32_t  get_encoder_data(int enc_num){
 	return encoders[enc_num]->tick_count;
@@ -506,7 +644,7 @@ void lidar_sweep(sensor_msgs__msg__LaserScan *lidar_msg_test){
         int servo_angle = i * 10; // Move in 10° steps (0, 10, ..., 180)
         uint32_t angle_pwm = 500 + ((servo_angle * 500) / 180);
         __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, angle_pwm); // Move Servo
-        osDelay(100);  // Allow servo to move before reading LIDAR
+        //osDelay(100);  // Allow servo to move before reading LIDAR
 
         // Read LIDAR distance
         float distance = 0.0;

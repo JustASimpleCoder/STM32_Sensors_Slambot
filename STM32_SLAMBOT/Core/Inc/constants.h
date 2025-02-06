@@ -48,22 +48,22 @@ extern volatile float asax;
 extern volatile float asay;
 extern volatile float asaz;
 
-//typedef enum{
-//    STOP = 'x',
-//    MOVE_FORWARD = 'w',
-//    MOVE_BACKWARD = 's',
-//    MOVE_LEFT = 'l',
-//    MOVE_RIGHT = 'r',
-//    ROTATE_LEFT = 'a',
-//    ROTATE_RIGHT = 'd',
-//    DIAG_FORWARD_RIGHT = 'e',
-//    DIAG_BACKWARD_RIGHT = 'c',
-//    DIAG_FORWARD_LEFT = 'q',
-//    DIAG_BACKWARD_LEFT = 'z',
-//    FASTER = '+',
-//    SLOWER = '-',
-//    INVALID = '?'
-//}RobotMovement;
+typedef enum{
+    STOP = 'x',
+    MOVE_FORWARD = 'w',
+    MOVE_BACKWARD = 's',
+    MOVE_LEFT = 'l',
+    MOVE_RIGHT = 'r',
+    ROTATE_LEFT = 'a',
+    ROTATE_RIGHT = 'd',
+    DIAG_FORWARD_RIGHT = 'e',
+    DIAG_BACKWARD_RIGHT = 'c',
+    DIAG_FORWARD_LEFT = 'q',
+    DIAG_BACKWARD_LEFT = 'z',
+    FASTER = '+',
+    SLOWER = '-',
+    INVALID = '?'
+}RobotMovement;
 //
 //
 typedef enum{
@@ -72,37 +72,37 @@ typedef enum{
 	STOPPED = 100
 }Direction;
 //
-////typedef struct {
-////    Direction left_front;
-////    Direction right_front;
-////    Direction left_back;
-////    Direction right_back;
-////} MovementDirections;
-////
-////// Define static movement directions
-////const MovementDirections DIR_MOVE_FORWARD = {FORWARD, FORWARD, BACKWARD, BACKWARD};
-////const MovementDirections DIR_MOVE_BACKWARD = {BACKWARD, BACKWARD, FORWARD, FORWARD};
-////const MovementDirections DIR_MOVE_LEFT = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-////const MovementDirections DIR_MOVE_RIGHT = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-////const MovementDirections DIR_ROTATE_LEFT = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-////const MovementDirections DIR_ROTATE_RIGHT = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-////const MovementDirections DIR_DIAG_FORWARD_RIGHT = {FORWARD, STOPPED, FORWARD, STOPPED};
-////const MovementDirections DIR_DIAG_BACKWARD_RIGHT = {STOPPED, BACKWARD, STOPPED, BACKWARD};
-////const MovementDirections DIR_DIAG_FORWARD_LEFT = {STOPPED, FORWARD, STOPPED, FORWARD};
-////const MovementDirections DIR_DIAG_BACKWARD_LEFT = {BACKWARD, STOPPED, BACKWARD, STOPPED};
+//typedef struct {
+//    Direction left_front;
+//    Direction right_front;
+//    Direction left_back;
+//    Direction right_back;
+//} MovementDirections;
 //
-//
-////Direction* test = (Direction*)mallac(sizeof(Direction)*4);
-//Direction DIR_MOVE_FORWARD[] = {BACKWARD, FORWARD, FORWARD, BACKWARD};
-//Direction DIR_MOVE_BACKWARD[] = {FORWARD, BACKWARD, BACKWARD, FORWARD};
-//Direction DIR_MOVE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-//Direction DIR_MOVE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-//Direction DIR_ROTATE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
-//Direction DIR_ROTATE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
-//Direction DIR_DIAG_FORWARD_RIGHT[] = {FORWARD, STOPPED, FORWARD, STOPPED};
-//Direction DIR_DIAG_BACKWARD_RIGHT[] = {STOPPED, BACKWARD, STOPPED, BACKWARD};
-//Direction DIR_DIAG_FORWARD_LEFT[] = {STOPPED, FORWARD, STOPPED, FORWARD};
-//Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
+//// Define static movement directions
+//const MovementDirections DIR_MOVE_FORWARD = {FORWARD, FORWARD, BACKWARD, BACKWARD};
+//const MovementDirections DIR_MOVE_BACKWARD = {BACKWARD, BACKWARD, FORWARD, FORWARD};
+//const MovementDirections DIR_MOVE_LEFT = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+//const MovementDirections DIR_MOVE_RIGHT = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+//const MovementDirections DIR_ROTATE_LEFT = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+//const MovementDirections DIR_ROTATE_RIGHT = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+//const MovementDirections DIR_DIAG_FORWARD_RIGHT = {FORWARD, STOPPED, FORWARD, STOPPED};
+//const MovementDirections DIR_DIAG_BACKWARD_RIGHT = {STOPPED, BACKWARD, STOPPED, BACKWARD};
+//const MovementDirections DIR_DIAG_FORWARD_LEFT = {STOPPED, FORWARD, STOPPED, FORWARD};
+//const MovementDirections DIR_DIAG_BACKWARD_LEFT = {BACKWARD, STOPPED, BACKWARD, STOPPED};
+
+
+//Direction* test = (Direction*)mallac(sizeof(Direction)*4);
+static const Direction DIR_MOVE_FORWARD[] = {BACKWARD, FORWARD, FORWARD, BACKWARD};
+static const Direction DIR_MOVE_BACKWARD[] = {FORWARD, BACKWARD, BACKWARD, FORWARD};
+static const Direction DIR_MOVE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+static const Direction DIR_MOVE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+static const Direction DIR_ROTATE_LEFT[] = {BACKWARD, FORWARD, BACKWARD, FORWARD};
+static const Direction DIR_ROTATE_RIGHT[] = {FORWARD, BACKWARD, FORWARD, BACKWARD};
+static const Direction DIR_DIAG_FORWARD_RIGHT[] = {FORWARD, STOPPED, FORWARD, STOPPED};
+static const Direction DIR_DIAG_BACKWARD_RIGHT[] = {STOPPED, BACKWARD, STOPPED, BACKWARD};
+static const Direction DIR_DIAG_FORWARD_LEFT[] = {STOPPED, FORWARD, STOPPED, FORWARD};
+static const Direction DIR_DIAG_BACKWARD_LEFT[] = {BACKWARD, STOPPED, BACKWARD, STOPPED};
 //
 typedef enum{
     BACK = 0,
