@@ -19,8 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
-#include "constants.h"
-//#include <string.h>
+
 /* USER CODE BEGIN 0 */
 
 #include "constants.h"

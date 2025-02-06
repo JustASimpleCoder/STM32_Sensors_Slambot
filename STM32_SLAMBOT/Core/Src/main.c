@@ -241,9 +241,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
-  MX_UART4_Init();
   MX_I2C2_Init();
   MX_SPI2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   strcpy((char*)uart_buf, "Starting Timer2 \r\n");
   HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
@@ -251,6 +251,7 @@ int main(void)
   // void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
 
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 //  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim3, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
@@ -278,10 +279,10 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	 handle_IMU();
-	 handle_lidar_i2c();
-	 handle_encoder();
-
+	  // never reach here due to freeRTOS
+//	 handle_IMU();
+//	 handle_lidar_i2c();
+//	 handle_encoder();
 
 //	sprintf((char*)uart_buf, "EncoderTicks: %u\r\n", wheel1_ticks);
 //	HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
@@ -373,7 +374,7 @@ void MPU9250_Init(void)
 
 void handle_lidar(){
 
-    bool receive_lidar_data = true;
+   // bool receive_lidar_data = true;
     // Receive data from Lidar (9 bytes for a typical distance data frame)
 //    uint8_t continous_output[] = {0x5A, 0x05, 0x07, 0x01, 0x00};
 //    ret_lidar = HAL_UART_Transmit(&huart3, continous_output , strlen((char*)continous_output), HAL_MAX_DELAY);
@@ -382,55 +383,55 @@ void handle_lidar(){
 //        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
 //    }
 
-	ret_lidar = HAL_UART_Receive(&huart4, uart_lidar_buf, strlen((char*)uart_lidar_buf), HAL_MAX_DELAY);
-    if (ret_lidar != HAL_OK) {
-        // Handle UART receive failure
-        strcpy((char*)uart_buf, "Lidar UART Receive Failed in handle_lidar\r\n");
-        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-        receive_lidar_data = false;
-    }
-
-    if (receive_lidar_data) {
-    	 sprintf((char*)uart_buf, "Recieved data");
-    	 HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-        // Validate header
-        if (uart_lidar_buf[0] != 0x5A) {
-            strcpy((char*)uart_buf, "Invalid Lidar Data Header\r\n");
-            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-            return;
-        }
-
-        // Extract the payload length
-        uint8_t len = uart_lidar_buf[1];
-        if (len < 4 || len > 255) {
-            strcpy((char*)uart_buf, "Invalid Lidar Data Length\r\n");
-            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-            return;
-        }
-
-        sprintf((char*)uart_buf, "Header and payload okay data");
-        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-
-        // Parse distance data (Payload bytes)
-        uint16_t distance = (uart_lidar_buf[3] << 8) | uart_lidar_buf[2];
-
-        // Optional: Validate checksum (if checksum verification is enabled)
-        uint8_t checksum = 0;
-        for (int i = 0; i < len - 1; i++) {
-            checksum += uart_lidar_buf[i];
-        }
-        sprintf((char*)uart_buf, "Checksum okay data");
-        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-        if ((checksum & 0xFF) != uart_lidar_buf[len - 1]) {
-            strcpy((char*)uart_buf, "Lidar Checksum Error\r\n");
-            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-            return;
-        }
-
-        // Transmit distance over UART
-        sprintf((char*)uart_buf, "LiDAR Distance: %u cm\r\n", distance);
-        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-    }
+//	ret_lidar = HAL_UART_Receive(&huart4, uart_lidar_buf, strlen((char*)uart_lidar_buf), HAL_MAX_DELAY);
+//    if (ret_lidar != HAL_OK) {
+//        // Handle UART receive failure
+//        strcpy((char*)uart_buf, "Lidar UART Receive Failed in handle_lidar\r\n");
+//        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//        receive_lidar_data = false;
+//    }
+//
+//    if (receive_lidar_data) {
+//    	 sprintf((char*)uart_buf, "Recieved data");
+//    	 HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//        // Validate header
+//        if (uart_lidar_buf[0] != 0x5A) {
+//            strcpy((char*)uart_buf, "Invalid Lidar Data Header\r\n");
+//            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//            return;
+//        }
+//
+//        // Extract the payload length
+//        uint8_t len = uart_lidar_buf[1];
+//        if (len < 4 || len > 255) {
+//            strcpy((char*)uart_buf, "Invalid Lidar Data Length\r\n");
+//            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//            return;
+//        }
+//
+//        sprintf((char*)uart_buf, "Header and payload okay data");
+//        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//
+//        // Parse distance data (Payload bytes)
+//        uint16_t distance = (uart_lidar_buf[3] << 8) | uart_lidar_buf[2];
+//
+//        // Optional: Validate checksum (if checksum verification is enabled)
+//        uint8_t checksum = 0;
+//        for (int i = 0; i < len - 1; i++) {
+//            checksum += uart_lidar_buf[i];
+//        }
+//        sprintf((char*)uart_buf, "Checksum okay data");
+//        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//        if ((checksum & 0xFF) != uart_lidar_buf[len - 1]) {
+//            strcpy((char*)uart_buf, "Lidar Checksum Error\r\n");
+//            HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//            return;
+//        }
+//
+//        // Transmit distance over UART
+//        sprintf((char*)uart_buf, "LiDAR Distance: %u cm\r\n", distance);
+//        HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
+//    }
 }
 
 void handle_lidar_i2c(){
