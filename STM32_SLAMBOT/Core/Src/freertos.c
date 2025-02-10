@@ -76,9 +76,18 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE BEGIN Variables */
 rcl_publisher_t publisher;
 rcl_publisher_t encoder_publisher;
+
+rcl_publisher_t encoder_RB_publisher;
+rcl_publisher_t encoder_RF_publisher;
+rcl_publisher_t encoder_LF_publisher;
+rcl_publisher_t encoder_LB_publisher;
+
+
+rcl_publisher_t* encoder_pub[NUM_ENCODERS] = {&encoder_RB_publisher, &encoder_RF_publisher, &encoder_LF_publisher, &encoder_LB_publisher};
+
 rcl_publisher_t imu_publisher;
 rcl_publisher_t lidar_publisher;
-rcl_publisher_t encoder_pub_check;
+//rcl_publisher_t encoder_pub_check;
 
 rcl_subscription_t encoder_dir_subscriber;
 
@@ -142,6 +151,9 @@ void madgwick_init();
 void madgwick_update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 void madgwick_get_quaternion(float *qx, float *qy, float *qz, float *qw);
 void read_magnetometer(float *mag_x, float *mag_y, float *mag_z);
+
+
+void publisherInit();
 
 /* USER CODE END FunctionPrototypes */
 
@@ -258,6 +270,30 @@ void StartDefaultTask(void *argument)
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
         "encoder_data"
     );
+    rclc_publisher_init_default(
+        &encoder_RB_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "encoder_RB_data"
+    );
+    rclc_publisher_init_default(
+        &encoder_RF_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "encoder_RF_data"
+    );
+    rclc_publisher_init_default(
+        &encoder_LB_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "encoder_LB_data"
+    );
+    rclc_publisher_init_default(
+        &encoder_LF_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "encoder_LF_data"
+    );
 
     rclc_publisher_init_best_effort(
         &imu_publisher,
@@ -281,12 +317,12 @@ void StartDefaultTask(void *argument)
         "lidar_data"
     );
 
-    rclc_publisher_init_default(
-        &encoder_pub_check,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
-        "encoder_check"
-    );
+//    rclc_publisher_init_default(
+//        &encoder_pub_check,
+//        &node,
+//        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+//        "encoder_check"
+//    );
 
     rmw_qos_profile_t qos_profile = {
         .history = RMW_QOS_POLICY_HISTORY_KEEP_LAST, // Keep last message
@@ -336,7 +372,7 @@ void StartDefaultTask(void *argument)
 	msg.data = 0;
 
 	init_imu_msg(&imu_msg);
-	float lidar_dist;
+//	float lidar_dist;
 
 	rcl_ret_t ret;
 	rcl_ret_t imu_ret;
@@ -356,7 +392,7 @@ void StartDefaultTask(void *argument)
 
 		for(int i = 0; i < NUM_ENCODERS; i++){
 			encoder_msg.data = get_encoder_data(i);
-			ret = rcl_publish(&encoder_publisher, &encoder_msg, NULL);
+			ret = rcl_publish(encoder_pub[i], &encoder_msg, NULL);
 			if (ret != RCL_RET_OK)
 			{
 	//	      strcpy((char*)uart_buf, "encoder uRos msg failed \r\n");
@@ -426,9 +462,9 @@ void sub_encoder_dir_callback(const void * msgin)
     RobotMovement current_move = (RobotMovement)msg_enc->data.data[0]; // Assuming the message contains a single character
     update_encs_dir(current_move);
 
-    pub_encoder_dir_msg = *msg_enc;
-    pub_encoder_dir_msg.data.size = strlen(pub_encoder_dir_msg.data.data);
-    rcl_publish(&encoder_pub_check, &pub_encoder_dir_msg, NULL);
+    // pub_encoder_dir_msg = *msg_enc;
+    // pub_encoder_dir_msg.data.size = strlen(pub_encoder_dir_msg.data.data);
+    // rcl_publish(&encoder_pub_check, &pub_encoder_dir_msg, NULL);
 
 }
 
