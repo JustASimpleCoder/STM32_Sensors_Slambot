@@ -24,7 +24,6 @@ usbipd detach --busid=6-1
 usbipd attach --wsl --busid=6-1
 ```
 
-
 In general you can follow these steps to get microros agent running:
 1. Start the agent before attachting to WSL.  
 2. Run themicrocontroller in the STM32 IDE, 
@@ -38,23 +37,23 @@ In general you can follow these steps to get microros agent running:
 This code has four main topics: 
 1. "cubemx_publisher" - just publishes basic integer data to ensure everything is working correctly (may remove later)
 2. "encoder_data" - publishes encoder tick count from the photo-interupt (currently all wheels are publishes on this one topic -> may move to 4 topics, one for each wheel)
-3. "imu_data" - publishes imu data utilizing the sensor_msg/Imu msg 
+3. "imu_data" - publishes imu data utilizing the sensor_msg/Imu msg
 4. "lidar_data" - publishes distance values in cm (will integrate this with more ROS2 laser msg)
-5. "motor_control" -subscriber to the current motor command () 
+5. "motor_control" - subscriber to the current motor command (see the arduino code running my motors for my slambot project here https://github.com/JustASimpleCoder/Ardunio_Motor_Driver_Slambot), that updates whether to increase or decrease enocder count (i.e. forwards we increment, backwards we decrement)  
 
 # Pin Configuration
 
 I2C pin connections for MPU9250 IMU:
 - VCC to 3.3 V
 - GND to GND
-- SDA to pin D14 (PB_9 in CN5)
+- SDA to pin D14 (PB9 in CN5)
 - SCL to pin D15 (PB8 in CN5)
 
 I2C pin connections for Luna LIDAR: 
 - VCC to 5V
 - GND to GND
-- SDA to PC12 (top left of CN7) 
-- SCL to PB10 (7 from boot on left of CN10)
+- SDA to PC12 (Top left of CN7) 
+- SCL to PB10 (7 from bottom on left of CN10)
 - Config Input to GND
 
 Photo-interuptor Encoder: 
@@ -62,11 +61,11 @@ Photo-interuptor Encoder:
 - GND to GND
 - Right Back Wheel PA9 (D8 in CN9)
 - Right front Wheel PA10 (D2 in CN9)
-- left Back Wheel PA6 (D12 in CN9)
-- left front Wheel PA7 (D11 in CN9)
+- Left Back Wheel PA6 (D12 in CN9)
+- Left front Wheel PA7 (D11 in CN9)
 
 
 # Future Updates
 - adding a topic for each encoder instead of just one
 - integrate this with the nav stack or other slam methods
-- abstracting some of the pyublisher/subscriber definitions
+- abstracting some of the publisher/subscriber definitions
