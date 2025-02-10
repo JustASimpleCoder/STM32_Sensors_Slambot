@@ -36,10 +36,14 @@ In general you can follow these steps to get microros agent running:
 # Topics, Publishers and Subscriber
 This code has four main topics: 
 1. "cubemx_publisher" - just publishes basic integer data to ensure everything is working correctly (may remove later)
-2. "encoder_data" - publishes encoder tick count from the photo-interupt (currently all wheels are publishes on this one topic -> may move to 4 topics, one for each wheel)
+2.
 3. "imu_data" - publishes imu data utilizing the sensor_msg/Imu msg
 4. "lidar_data" - publishes distance values in cm (will integrate this with more ROS2 laser msg)
-5. "motor_control" - subscriber to the current motor command (see the arduino code running my motors for my slambot project here https://github.com/JustASimpleCoder/Ardunio_Motor_Driver_Slambot), that updates whether to increase or decrease enocder count (i.e. forwards we increment, backwards we decrement)  
+5. "encoder_RB_data" - publishes encoder tick count from the photo-interupt for the right back motor
+6. "encoder_RF_data" - publishes encoder tick count from the photo-interupt for the right front motor
+7. "encoder_LB_data" - publishes encoder tick count from the photo-interupt for the left back motor
+8. "encoder_LF_data" - publishes encoder tick count from the photo-interupt for the left front motor
+9. "motor_control" - subscriber to the current motor command (see the arduino code running my motors for my slambot project here https://github.com/JustASimpleCoder/Ardunio_Motor_Driver_Slambot), that updates whether to increase or decrease enocder count (i.e. forwards we increment, backwards we decrement)  
 
 # Pin Configuration
 
