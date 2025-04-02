@@ -25,6 +25,7 @@
 #include "constants.h"
 void init_MPU9250(void);
 void init_magnetometer(void);
+void init_lidar(void);
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -249,6 +250,5 @@ void init_magnetometer(void)
         asaz = ((asa[2] - 128) / 256.0f) + 1.0f;
     }
 }
-
 
 /* USER CODE END 1 */

@@ -70,6 +70,8 @@ void Error_Handler(void);
 #define Encoder_LB_Input_GPIO_Port GPIOA
 #define Encoder_LF_Input_Pin GPIO_PIN_7
 #define Encoder_LF_Input_GPIO_Port GPIOA
+#define IN1_pin_Pin GPIO_PIN_8
+#define IN1_pin_GPIO_Port GPIOA
 #define Encoder_RB_Input_Pin GPIO_PIN_9
 #define Encoder_RB_Input_GPIO_Port GPIOA
 #define Encoder_RF_Input_Pin GPIO_PIN_10
@@ -80,6 +82,8 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+#define IN2_pin_Pin GPIO_PIN_5
+#define IN2_pin_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

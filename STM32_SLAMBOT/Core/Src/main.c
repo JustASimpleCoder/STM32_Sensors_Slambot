@@ -163,7 +163,8 @@
 
 
 //forward wheel and back spin in opposite direction to achieve forward/backward
-// TODO: when moving direction right/left or diagonal, how to calcualte odometry?
+
+
 //Encoder right_back = {0, 0, BACKWARD, BACK, Encoder_RB_Input_GPIO_Port, Encoder_RB_Input_Pin};
 //Encoder right_front = {0, 0, FORWARD, FRONT, Encoder_RF_Input_GPIO_Port, Encoder_RF_Input_Pin};
 //Encoder left_front = {0, 0, FORWARD, FRONT, Encoder_LF_Input_GPIO_Port,Encoder_LF_Input_Pin};
@@ -251,7 +252,8 @@ int main(void)
   // void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim);
 
   HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 //  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim3, TIM_CHANNEL_ALL);
 //  HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
@@ -261,13 +263,13 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();
+   osKernelInitialize();
 
   /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
+   MX_FREERTOS_Init();
 
   /* Start scheduler */
-  osKernelStart();
+   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -279,16 +281,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  // never reach here due to freeRTOS
+//	 never reach here due to freeRTOS, but keep for debugging sensors when needed (also need tp comment osKernelStart)
 //	 handle_IMU();
 //	 handle_lidar_i2c();
 //	 handle_encoder();
 
-//	sprintf((char*)uart_buf, "EncoderTicks: %u\r\n", wheel1_ticks);
-//	HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//	__HAL_TIM_SET_COUNTER(&htim2, 0);
 
-	HAL_Delay(500);
+//	HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
@@ -457,7 +456,6 @@ void handle_lidar_i2c(){
 	if(connect_lidar_success){
 		// uint8_t i2c__test_buf[14];
 	    HAL_I2C_Mem_Read(&hi2c2, LIDAR_ADDR, 0x00, 1, i2c_lidar_buf, 14, HAL_MAX_DELAY);
-
 	    uint8_t distance = (i2c_lidar_buf[1] << 8) | i2c_lidar_buf[0];
         sprintf((char *)uart_buf, "LiDAR Distance: %u cm\r\n", distance);
         HAL_UART_Transmit(&huart2, uart_buf, strlen((char *)uart_buf), HAL_MAX_DELAY);

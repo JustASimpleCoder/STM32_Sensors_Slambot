@@ -28,6 +28,7 @@
 #include "usart.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
@@ -51,7 +52,8 @@
 #include "constants.h"
 #include "MadgwickAHRS.h"
 
-
+//freeRTOS stuff
+#include "timers.h"
 
 
 /* USER CODE END Includes */
@@ -99,7 +101,9 @@ std_msgs__msg__Int32 msg;
 std_msgs__msg__String sub_encoder_dir_msg;
 std_msgs__msg__String pub_encoder_dir_msg;
 
-sensor_msgs__msg__LaserScan lidar_msg_test;
+sensor_msgs__msg__LaserScan lidar_msg_laserscan;
+
+bool motor_spin_forward = true;
 
 uint32_t servo_angle = 0;
 uint32_t step = 10;
@@ -130,8 +134,6 @@ void microros_deallocate(void * pointer, void * state);
 void * microros_reallocate(void * pointer, size_t size, void * state);
 void * microros_zero_allocate(size_t number_of_elements, size_t size_of_element, void * state);
 
-
-
 int32_t get_encoder_data();
 void update_encs_dir(RobotMovement move);
 void update_multi_dir(const Direction  dir[]);
@@ -142,7 +144,7 @@ void sub_encoder_dir_callback(const void * msgin);
 void  init_imu_msg(sensor_msgs__msg__Imu *imu_data);
 void get_imu_data(sensor_msgs__msg__Imu *imu_data);
 
-void lidar_sweep(sensor_msgs__msg__LaserScan *lidar_msg_test);
+void lidar_sweep(sensor_msgs__msg__LaserScan *laserscan_msg, int32_t currentCount);
 bool get_lidar_data();
 
 
@@ -154,6 +156,9 @@ void read_magnetometer(float *mag_x, float *mag_y, float *mag_z);
 
 
 void publisherInit();
+
+
+void lidar_timer_callback(TimerHandle_t xTimer);
 
 /* USER CODE END FunctionPrototypes */
 
@@ -371,6 +376,9 @@ void StartDefaultTask(void *argument)
 
 	msg.data = 0;
 
+	TimerHandle_t lidar_timer;
+	lidar_timer = xTimerCreate("LidarTimer", pdMS_TO_TICKS(500), pdTRUE, NULL, lidar_timer_callback);
+	xTimerStart(lidar_timer, 0);
 	init_imu_msg(&imu_msg);
 //	float lidar_dist;
 
@@ -407,46 +415,18 @@ void StartDefaultTask(void *argument)
 		{
 //		  strcpy((char*)uart_buf, "imu uRos msg failed \r\n");
 //		  HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-		  msg.data = 0;
 		  printf("Error publishing imu data (line %d)\n", __LINE__);
 		}
 
-		lidar_sweep(&lidar_msg_test);
-	    rcl_ret_t ret = rcl_publish(&lidar_publisher, &lidar_msg_test, NULL);
-	    if (ret != RCL_RET_OK) {
-	        printf("Error publishing LIDAR data (line %d)\n", __LINE__);
-	    }
 
-//		if(get_lidar_data(&lidar_dist)){
-//			 lidar_msg.data = lidar_dist;
-//			 ret = rcl_publish(&lidar_publisher, &lidar_msg, NULL);
-//			 if (ret != RCL_RET_OK)
-//			 {
-////				 strcpy((char*)uart_buf, "lidar uRos msg failed \r\n");
-////				 HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
-//				 printf("Error publishing lidar data (line %d)\n", __LINE__);
-//			 }
+
+//		lidar_sweep(&lidar_msg_laserscan, 0);
+//		rcl_ret_t ret = rcl_publish(&lidar_publisher, &lidar_msg_laserscan, NULL);
+//		if (ret != RCL_RET_OK) {
+//			printf("Error publishing LIDAR data (line %d)\n", __LINE__);
 //		}
-
-
-		msg.data++;
-
-		if(msg.data < 100){
-			 __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1, 250);
-		}
-		else if(msg.data > 200 && msg.data < 300){
-			__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1, 750);
-		}
-		else if(msg.data > 400 && msg.data < 500){
-			__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1, 1250);
-		}
-		else if(msg.data > 600 && msg.data < 700){
-			__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1, 750);
-		}else{
-			msg.data = 0;
-		}
-
-
+	   // motor_spin_forward = !motor_spin_forward;
+	   // msg.data = 0;
 
 		osDelay(100);
 	}
@@ -656,45 +636,46 @@ void read_magnetometer(float *mag_x, float *mag_y, float *mag_z) {
 }
 
 
-void lidar_sweep(sensor_msgs__msg__LaserScan *lidar_msg_test){
+void lidar_sweep(sensor_msgs__msg__LaserScan * laserscan_msg, int32_t currentCount){
 
-    int steps = 18;  // 180° / 10° step size = 18 readings
+    // int steps = 12;
+    int total_steps = 18;
+    float distance = 0.0;
 
-    if (lidar_msg_test->ranges.data == NULL) {
-        lidar_msg_test->ranges.data = (float *)malloc(steps * sizeof(float));
-        lidar_msg_test->ranges.size = steps;
-        lidar_msg_test->ranges.capacity = steps;
+
+    if (laserscan_msg->ranges.data == NULL) {
+    	laserscan_msg->ranges.data = (float *)malloc(total_steps * sizeof(float));
+    	laserscan_msg->ranges.size = total_steps;
+    	laserscan_msg->ranges.capacity = total_steps;
     }
 
-    float lidar_readings[steps];
-
     // Set up LaserScan message parameters
-    lidar_msg_test->angle_min = 0.0;                       // Start angle (radians)
-    lidar_msg_test->angle_max = 3.14159;                   // End angle (π radians)
-    lidar_msg_test->angle_increment = (3.14159 / steps);   // Angle resolution per step
-    lidar_msg_test->range_min = 0.1;                       // Min valid range (10cm)
-    lidar_msg_test->range_max = 4.0;                       // Max valid range (4m)
+    laserscan_msg->angle_min = 0.0;                       // Start angle (radians)
+    laserscan_msg->angle_max = 0.0;                   // End angle (π radians)
+    laserscan_msg->angle_increment = 0.0;   // Angle resolution per step
+    laserscan_msg->range_min = 0.1;                       // Min valid range (10cm)
+    laserscan_msg->range_max = 4.0;                       // Max valid range (4m)
 
-    // 🔄 Sweep through 180 degrees
-    for (int i = 0; i < steps; i++) {
-        int servo_angle = i * 10; // Move in 10° steps (0, 10, ..., 180)
-        uint32_t angle_pwm = 500 + ((servo_angle * 500) / 180);
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, angle_pwm); // Move Servo
-        //osDelay(100);  // Allow servo to move before reading LIDAR
 
-        // Read LIDAR distance
-        float distance = 0.0;
+    laserscan_msg->header.stamp.sec = 0;
+    laserscan_msg->header.stamp.nanosec = 0;
+
+    if (laserscan_msg->header.frame_id.data == NULL) {
+        laserscan_msg->header.frame_id.data = (char*)malloc(10 * sizeof(char));
+        laserscan_msg->header.frame_id.capacity = 10;
+    }
+
+    strcpy(laserscan_msg->header.frame_id.data, "lidar_link");
+    laserscan_msg->header.frame_id.size = strlen("lidar_link");
+
+    for (int i = 0; i < total_steps; i++) {
         if (get_lidar_data(&distance)) {
-            lidar_readings[i] = distance;
+            laserscan_msg->ranges.data[i] = distance;
         } else {
-            lidar_readings[i] = 0.0; // Mark as invalid if LIDAR fails
+            laserscan_msg->ranges.data[i] = 69.69;
         }
     }
 
-    // Copy collected data into LaserScan message
-   for (int i = 0; i < steps; i++) {
-        lidar_msg_test->ranges.data[i] = lidar_readings[i];
-    }
 }
 
 
@@ -703,7 +684,7 @@ bool get_lidar_data(float * dist_out){
 	uart_buf[0] = REG_TEMP;
 	HAL_StatusTypeDef lidar_ret_func;
 
-	lidar_ret_func = HAL_I2C_Master_Transmit(&hi2c2, LIDAR_ADDR, uart_buf, 1, HAL_MAX_DELAY);
+	lidar_ret_func = HAL_I2C_Master_Transmit(&hi2c2, LIDAR_ADDR, i2c_lidar_buf, 1, HAL_MAX_DELAY);
 	if(lidar_ret_func != HAL_OK){
 //		strcpy((char*)uart_buf, "Lidar I2C Transmit Failed in handle_IMU\r\n");
 //		HAL_UART_Transmit(&huart2, uart_buf, strlen((char*)uart_buf), HAL_MAX_DELAY);
@@ -728,6 +709,15 @@ bool get_lidar_data(float * dist_out){
 	*dist_out = (float)distance;
 
 	return true;
+}
+
+
+void lidar_timer_callback(TimerHandle_t xTimer) {
+	lidar_sweep(&lidar_msg_laserscan, 0);
+	rcl_ret_t ret = rcl_publish(&lidar_publisher, &lidar_msg_laserscan, NULL);
+	if (ret != RCL_RET_OK) {
+		printf("Error publishing LIDAR data (line %d)\n", __LINE__);
+	}
 }
 /* USER CODE END Application */
 
